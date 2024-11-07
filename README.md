@@ -17,7 +17,7 @@ The package can be installed via Composer.
 $ composer require ahorn/friendlycaptcha
 ```
 
-## Updato from v1
+## Update from v1
 
 Change `secretKey` to `apiKey`
 
