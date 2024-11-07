@@ -34,6 +34,7 @@ Ahorn:
     startVerification: 'auto'
     apiEndpoint: 'global'
     theme: 'auto'
+    cert: 'default'
 ```
 
 ### language
@@ -61,6 +62,13 @@ By default the widget fetches puzzles from https://global.frcapi.com/api/v2/capt
 * `light`: A light theme (default).
 * `dark`: A dark "night mode" theme.
 * `auto`: `Default`Match the user's operating system or browser preference settings.
+
+### cert
+If you ran into some SSL problems like me here are some helpful options
+
+* `default`:  In php.ini registered cacert.pem.
+* `false`:    No SSL Check for https://global.frcapi.com/api/v2/captcha.
+* `composer`: Use CaBundle from Composer;
 
 In production environment we strictly recommend to use environment variables to set the values.
 

@@ -8,6 +8,7 @@ use Neos\Form\Core\Model\AbstractFormElement;
 use Neos\Form\Core\Runtime\FormRuntime;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
+use Composer\CaBundle\CaBundle;
 
 class Captcha extends AbstractFormElement
 {
@@ -110,19 +111,31 @@ class Captcha extends AbstractFormElement
 
     public function verifyCaptchaSolutionV2($url, $response, $apiKey)
     {
+
         $data = ['response' => $response];
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
             'X-API-Key' => $apiKey,
         ];
+
+
+        if($this ->settings['composer'] === 'php') {
+            $verify = CaBundle::getBundledCaBundlePath();
+        } elseif ($this ->settings['cert'] === 'false') {
+            $verify = false;
+        } else {
+            $verify = true;
+        }
+
         $client = new Client();
+
         try {
             $apiResponse = $client->post($url, [
                 'headers' => $headers,
                 'json' => $data,
                 'timeout' => 5,
-                'verify' => false, // TODO hier was überlegen
+                'verify' => $verify,
             ]);
 
             $body = $apiResponse->getBody()->getContents();
