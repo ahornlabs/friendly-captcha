@@ -7,17 +7,10 @@ use Neos\Error\Messages\Error;
 use Neos\Form\Core\Model\AbstractFormElement;
 use Neos\Form\Core\Runtime\FormRuntime;
 use GuzzleHttp\Client;
-use Psr\Log\LoggerInterface;
+use GuzzleHttp\Exception\RequestException;
 
 class Captcha extends AbstractFormElement
 {
-
-
-    /**
-     * @Flow\Inject
-     * @var LoggerInterface
-     */
-    protected $logger;
 
     /**
      * @Flow\InjectConfiguration()
@@ -55,8 +48,6 @@ class Captcha extends AbstractFormElement
             return;
         }
 
-        $this->logger->info('Sven 111 Verify Value: ' .$elementValue);
-
         if (empty($elementValue)) {
           $processingRule = $this->getRootForm()->getProcessingRule($this->getIdentifier());
           $processingRule->getProcessingMessages()->addError(new Error('You forgot to add the solution parameter.', 1515642243));
@@ -66,8 +57,6 @@ class Captcha extends AbstractFormElement
 
         $verify = $this->verifyCaptchaSolutionV2('https://'.$apiEndpoint.'.frcapi.com/api/v2/captcha/siteverify', $elementValue, $apiKey);
         $response = $verify ? json_decode($verify, true) : [];
-
-        $this->logger->info('Sven 111 response Value: ' . json_encode($response));
 
         if (empty($response)) {
             $processingRule = $this->getRootForm()->getProcessingRule($this->getIdentifier());
@@ -113,7 +102,7 @@ class Captcha extends AbstractFormElement
      * Verify the generated solution with Friendly Captcha API.
      *
      * @param string $url Friendly Captcha verify url
-     * @param string $options Query string with options like secret key
+     * @param string $response string with value of friendlyCaptcha Widget
      * @param string $apiKey a string with the api key
      *
      * @return bool|string
@@ -122,16 +111,11 @@ class Captcha extends AbstractFormElement
     public function verifyCaptchaSolutionV2($url, $response, $apiKey)
     {
         $data = ['response' => $response];
-        $jsonData = json_encode($data);
         $headers = [
             'Content-Type' => 'application/json',
             'Accept' => 'application/json',
             'X-API-Key' => $apiKey,
         ];
-        $jsonHeader = json_encode($headers);
-        $this->logger->info('Sven 111 Verify Value: ' .$jsonData );
-        $this->logger->info('Sven 111 Key: ' .$apiKey);
-        $this->logger->info('Sven 111 Header: ' .$jsonHeader);
         $client = new Client();
         try {
             $apiResponse = $client->post($url, [
@@ -145,36 +129,13 @@ class Captcha extends AbstractFormElement
 
             return $body;
 
-        } catch (\Exception $e) {
-            $this->logger->error('Fehler bei der Anfrage: ' . $e->getMessage());
-            $this->logger->error('Fehlercode: ' . $e->getCode());
-            $this->logger->error('Stack-Trace: ' . $e->getTraceAsString());
-            return null;
+        } catch (RequestException $e) {
+            if ($e->hasResponse()) {
+                $errorBody = $e->getResponse()->getBody()->getContents();
+                return $errorBody;
+            } else {
+                return null;
+            }
         }
-
-
-
-        // $ch = curl_init();
-        // $headers = [
-        //     'Content-Type: application/json',
-        //     'Accept: application/json',
-        //     'X-API-Key: ' . $apiKey,
-        // ];
-        // $data = ['response' => $response];
-        // $jsonData = json_encode($data);
-        // curl_setopt($ch, CURLOPT_TIMEOUT, 5);
-        // curl_setopt($ch, CURLOPT_URL, $url);
-        // curl_setopt($ch, CURLOPT_POST, true);
-        // curl_setopt($ch, CURLOPT_POSTFIELDS,  $jsonData);
-        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        // curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        // $curlResponse = curl_exec($ch);
-
-        // $this->logger->info('frienldycaptcha-url ' . $url);
-        // $this->logger->info('frienldycaptcha-options ' . $jsonData);
-        // $this->logger->info('frienldycaptcha-apikey ' . $apiKey);
-        // $this->logger->info('frienldycaptcha-response ' . $curlResponse);
-        // curl_close($ch);
-        // return $curlResponse;
     }
 }
