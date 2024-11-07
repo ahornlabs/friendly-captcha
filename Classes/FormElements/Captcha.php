@@ -7,9 +7,17 @@ use Neos\Error\Messages\Error;
 use Neos\Form\Core\Model\AbstractFormElement;
 use Neos\Form\Core\Runtime\FormRuntime;
 use GuzzleHttp\Client;
+use Psr\Log\LoggerInterface;
 
 class Captcha extends AbstractFormElement
 {
+
+
+    /**
+     * @Flow\Inject
+     * @var LoggerInterface
+     */
+    protected $logger;
 
     /**
      * @Flow\InjectConfiguration()
@@ -47,16 +55,19 @@ class Captcha extends AbstractFormElement
             return;
         }
 
+        $this->logger->info('Sven 111 Verify Value: ' .$elementValue);
+
         if (empty($elementValue)) {
           $processingRule = $this->getRootForm()->getProcessingRule($this->getIdentifier());
           $processingRule->getProcessingMessages()->addError(new Error('You forgot to add the solution parameter.', 1515642243));
           return;
         }
 
+
         $verify = $this->verifyCaptchaSolutionV2('https://'.$apiEndpoint.'.frcapi.com/api/v2/captcha/siteverify', $elementValue, $apiKey);
         $response = $verify ? json_decode($verify, true) : [];
 
-
+        $this->logger->info('Sven 111 response Value: ' . json_encode($response));
 
         if (empty($response)) {
             $processingRule = $this->getRootForm()->getProcessingRule($this->getIdentifier());
@@ -110,16 +121,21 @@ class Captcha extends AbstractFormElement
 
     public function verifyCaptchaSolutionV2($url, $response, $apiKey)
     {
-
         $data = ['response' => $response];
+        $jsonData = json_encode($data);
+        $headers = [
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+            'X-API-Key' => $apiKey,
+        ];
+        $jsonHeader = json_encode($headers);
+        $this->logger->info('Sven 111 Verify Value: ' .$jsonData );
+        $this->logger->info('Sven 111 Key: ' .$apiKey);
+        $this->logger->info('Sven 111 Header: ' .$jsonHeader);
         $client = new Client();
         try {
             $apiResponse = $client->post($url, [
-                'headers' => [
-                    'Content-Type' => 'application/json',
-                    'Accept' => 'application/json',
-                    'X-API-Key' => $apiKey,
-                ],
+                'headers' => $headers,
                 'json' => $data,
                 'timeout' => 5,
                 'verify' => false, // TODO hier was überlegen
@@ -130,6 +146,9 @@ class Captcha extends AbstractFormElement
             return $body;
 
         } catch (\Exception $e) {
+            $this->logger->error('Fehler bei der Anfrage: ' . $e->getMessage());
+            $this->logger->error('Fehlercode: ' . $e->getCode());
+            $this->logger->error('Stack-Trace: ' . $e->getTraceAsString());
             return null;
         }
 
